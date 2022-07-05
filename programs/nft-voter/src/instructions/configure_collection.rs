@@ -6,10 +6,10 @@ use anchor_lang::{
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 use spl_governance::state::realm;
-use mpl_token_metadata::state::{CollectionDetails,Metadata};
+use mpl_token_metadata::state::{CollectionDetails, Metadata, TokenMetadataAccount};
 
 
-use crate::error::NftVoterError;
+use crate::{error::NftVoterError, tools::token_metadata::get_token_metadata};
 use crate::state::{max_voter_weight_record::MaxVoterWeightRecord, CollectionConfig, Registrar};
 
 /// Configures NFT voting collection which defines what NFTs can be used for governances
@@ -56,16 +56,27 @@ pub fn configure_collection(
 ) -> Result<()> {
     let collection = &ctx.accounts.collection;
 
-    let collection_metadata = Metadata::from_account_info(&ctx.accounts.metadata);
+    let collection_metadata : Result<Metadata> = get_token_metadata(&ctx.accounts.metadata.to_account_info());
     
     // Set size to the collection details config if available
-    let retrieved_size = if let Some(details) = collection_metadata.unwrap().collection_details {
-        match details {
-            CollectionDetails::V1 { size } => size,
-        }
-    } else {
-        size
+    let retrieved_size = match collection_metadata {
+        Ok(metadata) => match metadata.collection_details {
+            Some(details) =>  match details {
+                CollectionDetails::V1 { size } => size,
+            },
+            None => size,
+        },
+        Err(err) => return err!(NftVoterError::CollectionNotFound),
     };
+
+    // Set size to the collection details config if available
+    // let retrieved_size = if let Some(details) = collection_metadata.unwrap().collection_details {
+    //     match details {
+    //         CollectionDetails::V1 { size } => size,
+    //     }
+    // } else {
+    //     size
+    // };
 
     size = retrieved_size;
     
