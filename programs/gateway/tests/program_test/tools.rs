@@ -1,5 +1,5 @@
 use anchor_lang::prelude::ERROR_CODE_OFFSET;
-use gpl_nft_voter::error::NftVoterError;
+use gpl_civic_gateway::error::GatewayError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::{BanksClientError};
 use solana_sdk::{signature::Keypair, transaction::TransactionError};
@@ -14,13 +14,13 @@ pub fn clone_keypair(source: &Keypair) -> Keypair {
 pub fn NopOverride<T>(_: &mut T) {}
 
 #[allow(dead_code)]
-pub fn assert_nft_voter_err(banks_client_error: BanksClientError, nft_locker_error: NftVoterError) {
+pub fn assert_gateway_err(banks_client_error: BanksClientError, gateway_error: GatewayError) {
     let tx_error = banks_client_error.unwrap();
 
     match tx_error {
         TransactionError::InstructionError(_, instruction_error) => match instruction_error {
             InstructionError::Custom(e) => {
-                assert_eq!(e, nft_locker_error as u32 + ERROR_CODE_OFFSET)
+                assert_eq!(e, gateway_error as u32 + ERROR_CODE_OFFSET)
             }
             _ => panic!("{:?} Is not InstructionError::Custom()", instruction_error),
         },
