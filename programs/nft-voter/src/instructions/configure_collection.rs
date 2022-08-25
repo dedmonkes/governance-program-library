@@ -69,14 +69,6 @@ pub fn configure_collection(
         Err(err) => return err!(NftVoterError::CollectionNotFound),
     };
 
-    // Set size to the collection details config if available
-    // let retrieved_size = if let Some(details) = collection_metadata.unwrap().collection_details {
-    //     match details {
-    //         CollectionDetails::V1 { size } => size,
-    //     }
-    // } else {
-    //     size
-    // };
 
     size = retrieved_size;
     
