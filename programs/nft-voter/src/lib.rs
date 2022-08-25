@@ -11,7 +11,7 @@ pub mod tools;
 
 use crate::state::*;
 
-declare_id!("GnftV5kLjd67tvHpNGyodwWveEKivz3ZWvvE3Z4xi2iw");
+declare_id!("4MJn3vLQyVhwF77iQ2uF2iSLDE3rWT5mmNw58SDtz79Z");
 
 #[program]
 pub mod nft_voter {
