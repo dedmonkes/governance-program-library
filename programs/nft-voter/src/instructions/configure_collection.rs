@@ -35,6 +35,7 @@ pub struct ConfigureCollection<'info> {
     // Collection which is going to be used for voting
     pub collection: Account<'info, Mint>,
 
+    /// CHECK: Checkd in instruction
     #[account(seeds = [b"metadata".as_ref(), mpl_token_metadata::ID.as_ref(), collection.key().as_ref()], bump, seeds::program = mpl_token_metadata::ID, owner = mpl_token_metadata::ID)]
     pub metadata: AccountInfo<'info>,
 
