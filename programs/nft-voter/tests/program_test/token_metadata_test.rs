@@ -1,9 +1,9 @@
 use std::{str::FromStr, sync::Arc};
 
 use anchor_lang::prelude::Pubkey;
-use mpl_token_metadata::state::{Collection,CollectionDetails};
-use solana_program_test::{ProgramTest, BanksClientError};
-use solana_sdk::{signer::Signer};
+use mpl_token_metadata::state::{Collection, CollectionDetails};
+use solana_program_test::{BanksClientError, ProgramTest};
+use solana_sdk::signer::Signer;
 
 use crate::program_test::program_test_bench::{MintCookie, ProgramTestBench, WalletCookie};
 
@@ -137,7 +137,7 @@ impl TokenMetadataTest {
             master_edition: master_edition_key,
         })
     }
-    
+
     #[allow(dead_code)]
     pub async fn with_nft_collection_v3(&self) -> Result<NftCollectionCookie, BanksClientError> {
         let update_authority = self.bench.context.borrow().payer.pubkey();
@@ -160,7 +160,7 @@ impl TokenMetadataTest {
         let coll_name = "NFT_C".to_string();
         let coll_symbol = "NFT_C".to_string();
         let coll_uri = "URI".to_string();
-        let coll_details = Some(CollectionDetails::V1 {size: 0});
+        let coll_details = Some(CollectionDetails::V1 { size: 0 });
 
         let create_coll_metadata_ix = mpl_token_metadata::instruction::create_metadata_accounts_v3(
             self.program_id,
@@ -196,8 +196,6 @@ impl TokenMetadataTest {
         ];
         let (master_edition_key, _) =
             Pubkey::find_program_address(master_edition_seeds, &self.program_id);
-
-
 
         let create_master_edition_ix = mpl_token_metadata::instruction::create_master_edition_v3(
             self.program_id,

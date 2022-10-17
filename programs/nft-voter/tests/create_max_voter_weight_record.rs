@@ -2,7 +2,6 @@ use program_test::{nft_voter_test::NftVoterTest, tools::assert_ix_err};
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 
-
 mod program_test;
 
 #[tokio::test]
@@ -34,8 +33,8 @@ async fn test_create_max_voter_weight_record() -> Result<(), BanksClientError> {
 }
 
 #[tokio::test]
-async fn test_create_max_voter_weight_record_with_invalid_realm_error() -> Result<(), BanksClientError>
-{
+async fn test_create_max_voter_weight_record_with_invalid_realm_error(
+) -> Result<(), BanksClientError> {
     // Arrange
     let mut nft_voter_test = NftVoterTest::start_new().await;
 
@@ -63,8 +62,8 @@ async fn test_create_max_voter_weight_record_with_invalid_realm_error() -> Resul
 }
 
 #[tokio::test]
-async fn test_create_max_voter_weight_record_with_invalid_mint_error() -> Result<(), BanksClientError>
-{
+async fn test_create_max_voter_weight_record_with_invalid_mint_error(
+) -> Result<(), BanksClientError> {
     // Arrange
     let mut nft_voter_test = NftVoterTest::start_new().await;
 

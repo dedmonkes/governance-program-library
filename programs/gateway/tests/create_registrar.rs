@@ -6,7 +6,7 @@ use program_test::gateway_voter_test::GatewayVoterTest;
 use gpl_civic_gateway::error::GatewayError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
-use solana_sdk::{signature::Keypair};
+use solana_sdk::signature::Keypair;
 
 use program_test::tools::{assert_anchor_err, assert_gateway_err, assert_ix_err};
 
@@ -34,7 +34,8 @@ async fn test_create_registrar() -> Result<(), BanksClientError> {
 }
 
 #[tokio::test]
-async fn test_create_registrar_with_invalid_realm_authority_error() -> Result<(), BanksClientError> {
+async fn test_create_registrar_with_invalid_realm_authority_error() -> Result<(), BanksClientError>
+{
     // Arrange
     let mut gateway_voter_test = GatewayVoterTest::start_new().await;
 
@@ -82,8 +83,8 @@ async fn test_create_registrar_with_realm_authority_must_sign_error() -> Result<
 }
 
 #[tokio::test]
-async fn test_create_registrar_with_invalid_spl_gov_program_id_error() -> Result<(), BanksClientError>
-{
+async fn test_create_registrar_with_invalid_spl_gov_program_id_error(
+) -> Result<(), BanksClientError> {
     // Arrange
     let mut gateway_voter_test = GatewayVoterTest::start_new().await;
 

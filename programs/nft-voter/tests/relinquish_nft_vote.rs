@@ -3,7 +3,7 @@ use gpl_nft_voter::error::NftVoterError;
 use program_test::nft_voter_test::{CastNftVoteArgs, NftVoterTest};
 use program_test::tools::assert_nft_voter_err;
 use solana_program_test::*;
-
+use spl_governance::state::vote_record::{Vote, VoteChoice};
 
 mod program_test;
 
@@ -417,6 +417,10 @@ async fn test_relinquish_nft_vote_with_unexpired_vote_weight_record() -> Result<
 
     let args = CastNftVoteArgs {
         cast_spl_gov_vote: false,
+        vote_type : Vote::Approve(vec![VoteChoice {
+            rank: 0,
+            weight_percentage: 100,
+        }])
     };
 
     // Cast vote with NFT

@@ -14,7 +14,7 @@ use spl_governance::state::vote_record::{Vote, VoteChoice};
 
 use gpl_civic_gateway::state::{get_registrar_address, Registrar};
 
-use solana_program_test::{ProgramTest, BanksClientError};
+use solana_program_test::{BanksClientError, ProgramTest};
 use solana_sdk::instruction::Instruction;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;

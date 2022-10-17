@@ -1,8 +1,8 @@
 use gpl_nft_voter::error::NftVoterError;
 use program_test::{
     nft_voter_test::NftVoterTest,
-    tools::{assert_anchor_err, assert_nft_voter_err},
     token_metadata_test::CreateNftArgs,
+    tools::{assert_anchor_err, assert_nft_voter_err},
 };
 
 use solana_program_test::*;
@@ -71,7 +71,10 @@ async fn test_configure_collection_sized_with_five_nft_mints() -> Result<(), Ban
 
     let registrar_cookie = nft_voter_test.with_registrar(&realm_cookie).await?;
 
-    let nft_collection_cookie = nft_voter_test.token_metadata.with_nft_collection_v3().await?;
+    let nft_collection_cookie = nft_voter_test
+        .token_metadata
+        .with_nft_collection_v3()
+        .await?;
 
     let minter_cookie = nft_voter_test.bench.with_wallet().await;
 
@@ -410,8 +413,8 @@ async fn test_configure_collection_with_realm_authority_must_sign_error(
 }
 
 #[tokio::test]
-async fn test_configure_collection_with_invalid_realm_authority_error() -> Result<(), BanksClientError>
-{
+async fn test_configure_collection_with_invalid_realm_authority_error(
+) -> Result<(), BanksClientError> {
     // Arrange
     let mut nft_voter_test = NftVoterTest::start_new().await;
 

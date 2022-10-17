@@ -6,7 +6,6 @@ use program_test::token_metadata_test::CreateNftArgs;
 use program_test::tools::*;
 use solana_program_test::*;
 
-
 mod program_test;
 
 #[tokio::test]
@@ -151,7 +150,8 @@ async fn test_update_voter_weight_with_multiple_nfts() -> Result<(), BanksClient
 }
 
 #[tokio::test]
-async fn test_update_voter_weight_with_cast_vote_not_allowed_error() -> Result<(), BanksClientError> {
+async fn test_update_voter_weight_with_cast_vote_not_allowed_error() -> Result<(), BanksClientError>
+{
     // Arrange
     let mut nft_voter_test = NftVoterTest::start_new().await;
 
@@ -207,7 +207,8 @@ async fn test_update_voter_weight_with_cast_vote_not_allowed_error() -> Result<(
 }
 
 #[tokio::test]
-async fn test_update_voter_weight_with_unverified_collection_error() -> Result<(), BanksClientError> {
+async fn test_update_voter_weight_with_unverified_collection_error() -> Result<(), BanksClientError>
+{
     // Arrange
     let mut nft_voter_test = NftVoterTest::start_new().await;
 
