@@ -9,7 +9,7 @@ use gpl_nft_voter::state::*;
 
 use solana_program::sysvar;
 use spl_governance::instruction::cast_vote;
-use spl_governance::state::proposal_transaction::get_proposal_transaction_address;
+use spl_governance::state::proposal_transaction::{get_proposal_transaction_address, ProposalTransactionV2};
 use spl_governance::state::vote_record::{self, Vote, VoteChoice};
 
 use gpl_nft_voter::state::{
@@ -48,6 +48,11 @@ pub struct MaxVoterWeightRecordCookie {
     pub account: MaxVoterWeightRecord,
 }
 
+pub struct ProposalTransactionCookie {
+    pub address : Pubkey,
+    pub account : ProposalTransactionV2
+}
+
 pub struct CollectionConfigCookie {
     pub collection_config: CollectionConfig,
 }
@@ -71,17 +76,17 @@ pub struct NftVoteRecordCookie {
 
 pub struct CastNftVoteArgs {
     pub cast_spl_gov_vote: bool,
-    pub vote_type : Vote
+    pub vote_type: Vote,
 }
 
 impl Default for CastNftVoteArgs {
     fn default() -> Self {
         Self {
             cast_spl_gov_vote: true,
-            vote_type : Vote::Approve(vec![VoteChoice {
+            vote_type: Vote::Approve(vec![VoteChoice {
                 rank: 0,
                 weight_percentage: 100,
-            }])
+            }]),
         }
     }
 }
@@ -491,6 +496,7 @@ impl NftVoterTest {
         nft_voter_cookie: &WalletCookie,
         voter_token_owner_record_cookie: &TokenOwnerRecordCookie,
         nft_cookies: &[&NftCookie],
+        proposal_transaction_cookie : Option<ProposalTransactionCookie>,
         args: Option<CastNftVoteArgs>,
     ) -> Result<Vec<NftVoteRecordCookie>, BanksClientError> {
         let args = args.unwrap_or_default();
@@ -500,12 +506,6 @@ impl NftVoterTest {
         let option_index: u8 = 0;
         let instruction_index: u16 = 0;
 
-        let proposal_transaction = get_proposal_transaction_address(
-            &self.governance.program_id,
-            &proposal_cookie.address,
-            &option_index.to_le_bytes(),
-            &instruction_index.to_le_bytes(),
-        );
 
         let accounts = gpl_nft_voter::accounts::CastNftVote {
             registrar: registrar_cookie.address,
@@ -517,7 +517,7 @@ impl NftVoterTest {
             // proposal_transaction,
             instruction_sysvar_account: sysvar::instructions::id(),
             governance_program: self.governance.program_id,
-            proposal_transaction,
+            // proposal_transaction,
         };
 
         let mut account_metas = anchor_lang::ToAccountMetas::to_account_metas(&accounts, None);
@@ -532,6 +532,11 @@ impl NftVoterTest {
                 &nft_cookie.mint_cookie.address,
             );
             account_metas.push(AccountMeta::new(nft_vote_record_key, false));
+            
+            if let Some(ref prop_tx) =  proposal_transaction_cookie{
+                account_metas.push(AccountMeta::new(prop_tx.address, false));
+
+            }
 
             let account = NftVoteRecord {
                 proposal: proposal_cookie.address,

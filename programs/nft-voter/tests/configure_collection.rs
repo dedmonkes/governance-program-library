@@ -555,7 +555,7 @@ async fn test_configure_collection_with_voting_proposal_error() -> Result<(), Ba
 
     nft_voter_test
         .governance
-        .with_proposal(&realm_cookie)
+        .with_proposal(&realm_cookie, None)
         .await?;
 
     nft_voter_test.bench.advance_clock().await;
