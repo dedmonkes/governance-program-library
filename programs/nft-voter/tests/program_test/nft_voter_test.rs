@@ -7,14 +7,16 @@ use gpl_nft_voter::state::max_voter_weight_record::{
 };
 use gpl_nft_voter::state::*;
 
+use solana_program::sysvar;
 use spl_governance::instruction::cast_vote;
+use spl_governance::state::proposal_transaction::ProposalTransactionV2;
 use spl_governance::state::vote_record::{self, Vote, VoteChoice};
 
 use gpl_nft_voter::state::{
     get_nft_vote_record_address, get_registrar_address, CollectionConfig, NftVoteRecord, Registrar,
 };
 
-use solana_program_test::{ProgramTest, BanksClientError};
+use solana_program_test::{BanksClientError, ProgramTest};
 use solana_sdk::instruction::Instruction;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
@@ -46,6 +48,11 @@ pub struct MaxVoterWeightRecordCookie {
     pub account: MaxVoterWeightRecord,
 }
 
+pub struct ProposalTransactionCookie {
+    pub address: Pubkey,
+    pub account: ProposalTransactionV2,
+}
+
 pub struct CollectionConfigCookie {
     pub collection_config: CollectionConfig,
 }
@@ -69,12 +76,17 @@ pub struct NftVoteRecordCookie {
 
 pub struct CastNftVoteArgs {
     pub cast_spl_gov_vote: bool,
+    pub vote_type: Vote,
 }
 
 impl Default for CastNftVoteArgs {
     fn default() -> Self {
         Self {
             cast_spl_gov_vote: true,
+            vote_type: Vote::Approve(vec![VoteChoice {
+                rank: 0,
+                weight_percentage: 100,
+            }]),
         }
     }
 }
@@ -444,7 +456,7 @@ impl NftVoterTest {
             registrar: registrar_cookie.address,
             realm: registrar_cookie.account.realm,
             realm_authority: registrar_cookie.realm_authority.pubkey(),
-            collection: nft_collection_cookie.mint, 
+            collection: nft_collection_cookie.mint,
             max_voter_weight_record: max_voter_weight_record_cookie.address,
         };
 
@@ -484,13 +496,12 @@ impl NftVoterTest {
         nft_voter_cookie: &WalletCookie,
         voter_token_owner_record_cookie: &TokenOwnerRecordCookie,
         nft_cookies: &[&NftCookie],
+        proposal_transaction_cookie: Option<ProposalTransactionCookie>,
         args: Option<CastNftVoteArgs>,
     ) -> Result<Vec<NftVoteRecordCookie>, BanksClientError> {
         let args = args.unwrap_or_default();
 
-        let data = anchor_lang::InstructionData::data(&gpl_nft_voter::instruction::CastNftVote {
-            proposal: proposal_cookie.address,
-        });
+        let data = anchor_lang::InstructionData::data(&gpl_nft_voter::instruction::CastNftVote {});
 
         let accounts = gpl_nft_voter::accounts::CastNftVote {
             registrar: registrar_cookie.address,
@@ -498,6 +509,9 @@ impl NftVoterTest {
             governing_token_owner: nft_voter_cookie.address,
             payer: self.bench.payer.pubkey(),
             system_program: solana_sdk::system_program::id(),
+            proposal: proposal_cookie.address,
+            instruction_sysvar_account: sysvar::instructions::id(),
+            governance_program: self.governance.program_id,
         };
 
         let mut account_metas = anchor_lang::ToAccountMetas::to_account_metas(&accounts, None);
@@ -527,6 +541,10 @@ impl NftVoterTest {
             })
         }
 
+        if let Some(ref prop_tx) = proposal_transaction_cookie {
+            account_metas.push(AccountMeta::new(prop_tx.address, false));
+        }
+
         let cast_nft_vote_ix = Instruction {
             program_id: gpl_nft_voter::id(),
             accounts: account_metas,
@@ -536,12 +554,6 @@ impl NftVoterTest {
         let mut instruction = vec![cast_nft_vote_ix];
 
         if args.cast_spl_gov_vote {
-            // spl-gov cast vote
-            let vote = Vote::Approve(vec![VoteChoice {
-                rank: 0,
-                weight_percentage: 100,
-            }]);
-
             let cast_vote_ix = cast_vote(
                 &self.governance.program_id,
                 &registrar_cookie.account.realm,
@@ -554,7 +566,7 @@ impl NftVoterTest {
                 &self.bench.payer.pubkey(),
                 Some(voter_weight_record_cookie.address),
                 Some(max_voter_weight_record_cookie.address),
-                vote,
+                args.vote_type,
             );
 
             instruction.push(cast_vote_ix);

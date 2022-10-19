@@ -1,16 +1,15 @@
+use anchor_lang::prelude::*;
 use anchor_lang::{
     account,
     prelude::{Context, Signer},
     Accounts,
 };
-use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
+use mpl_token_metadata::state::{CollectionDetails, Metadata};
 use spl_governance::state::realm;
-use mpl_token_metadata::state::{CollectionDetails, Metadata, TokenMetadataAccount};
 
-
-use crate::{error::NftVoterError, tools::token_metadata::get_token_metadata};
 use crate::state::{max_voter_weight_record::MaxVoterWeightRecord, CollectionConfig, Registrar};
+use crate::{error::NftVoterError, tools::token_metadata::get_token_metadata};
 
 /// Configures NFT voting collection which defines what NFTs can be used for governances
 /// and what weight they have
@@ -57,24 +56,24 @@ pub fn configure_collection(
 ) -> Result<()> {
     let collection = &ctx.accounts.collection;
 
-    let collection_metadata : Result<Metadata> = get_token_metadata(&ctx.accounts.metadata.to_account_info());
-    
+    let collection_metadata: Result<Metadata> =
+        get_token_metadata(&ctx.accounts.metadata.to_account_info());
+
     // Set size to the collection details config if available
     let retrieved_size = match collection_metadata {
         Ok(metadata) => match metadata.collection_details {
-            Some(details) =>  match details {
+            Some(details) => match details {
                 CollectionDetails::V1 { size } => size,
             },
             None => size,
         },
-        Err(err) => return err!(NftVoterError::CollectionNotFound),
+        Err(_) => return err!(NftVoterError::CollectionNotFound),
     };
 
-
     size = retrieved_size;
-    
+
     require!(size > 0, NftVoterError::InvalidCollectionSize);
-    
+
     let registrar = &mut ctx.accounts.registrar;
 
     let realm = realm::get_realm_data_for_governing_token_mint(
@@ -92,7 +91,6 @@ pub fn configure_collection(
     if realm.voting_proposal_count > 0 {
         return err!(NftVoterError::CannotConfigureCollectionWithVotingProposals);
     }
-
 
     let collection_config = CollectionConfig {
         collection: collection.key(),

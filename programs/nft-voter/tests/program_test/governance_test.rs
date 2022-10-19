@@ -1,18 +1,24 @@
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
-use anchor_lang::prelude::Pubkey;
-use solana_program_test::{ProgramTest, BanksClientError};
+use anchor_lang::prelude::{AccountMeta, Pubkey};
+use anchor_lang::Id;
+use gpl_nft_voter::tools::phase_protocol::REVERT_STAGED_APPROVE_PHASE_DATA;
+use gpl_nft_voter::tools::{
+    governance::DedSplGovernanceProgram, phase_protocol::PhaseProtocolProgram,
+};
+use solana_program::instruction::Instruction;
+use solana_program_test::{BanksClientError, ProgramTest};
 use solana_sdk::{signature::Keypair, signer::Signer};
+use spl_governance::state::proposal_transaction::{
+    get_proposal_transaction_address, InstructionData, ProposalTransactionV2,
+};
 use spl_governance::{
     instruction::{
         create_governance, create_proposal, create_realm, create_token_owner_record,
-        deposit_governing_tokens, relinquish_vote, sign_off_proposal,
+        deposit_governing_tokens, insert_transaction, relinquish_vote, sign_off_proposal,
     },
     state::{
-        enums::{
-            GovernanceAccountType, MintMaxVoteWeightSource, ProposalState, VoteThresholdPercentage,
-            VoteTipping,
-        },
+        enums::{GovernanceAccountType, MintMaxVoteWeightSource, ProposalState, VoteTipping},
         governance::get_governance_address,
         proposal::{get_proposal_address, ProposalV2},
         realm::{get_realm_address, RealmConfig, RealmV2},
@@ -24,6 +30,8 @@ use crate::program_test::{
     program_test_bench::{MintCookie, ProgramTestBench, WalletCookie},
     tools::clone_keypair,
 };
+
+use super::nft_voter_test::ProposalTransactionCookie;
 
 pub struct RealmCookie {
     pub address: Pubkey,
@@ -59,7 +67,7 @@ pub struct GovernanceTest {
 
 impl GovernanceTest {
     pub fn program_id() -> Pubkey {
-        Pubkey::from_str("Governance111111111111111111111111111111111").unwrap()
+        DedSplGovernanceProgram::id()
     }
 
     #[allow(dead_code)]
@@ -146,6 +154,7 @@ impl GovernanceTest {
     pub async fn with_proposal(
         &mut self,
         realm_cookie: &RealmCookie,
+        options: Option<Vec<String>>,
     ) -> Result<ProposalCookie, BanksClientError> {
         let token_account_cookie = self
             .bench
@@ -208,13 +217,15 @@ impl GovernanceTest {
             &realm_cookie.realm_authority.pubkey(),
             None,
             spl_governance::state::governance::GovernanceConfig {
-                vote_threshold_percentage: VoteThresholdPercentage::YesVote(60),
                 min_community_weight_to_create_proposal: 1,
                 min_transaction_hold_up_time: 0,
                 max_voting_time: 600,
-                vote_tipping: VoteTipping::Disabled,
-                proposal_cool_off_time: 0,
+                vote_tipping: VoteTipping::Strict,
                 min_council_weight_to_create_proposal: 1,
+                community_vote_threshold:
+                    spl_governance::state::enums::VoteThreshold::YesVotePercentage(60),
+                council_vote_threshold: spl_governance::state::enums::VoteThreshold::Disabled,
+                council_veto_vote_threshold: spl_governance::state::enums::VoteThreshold::Disabled,
             },
         );
 
@@ -247,22 +258,13 @@ impl GovernanceTest {
             String::from("Proposal #1 link"),
             &proposal_governing_token_mint,
             spl_governance::state::proposal::VoteType::SingleChoice,
-            vec!["Yes".to_string()],
+            options.unwrap_or(vec!["Yes".to_string()]),
             true,
             0_u32,
         );
 
-        let sign_off_proposal_ix = sign_off_proposal(
-            &self.program_id,
-            &realm_cookie.address,
-            &governance_key,
-            &proposal_key,
-            &token_owner,
-            Some(&proposal_owner_record_key),
-        );
-
         self.bench
-            .process_transaction(&[create_proposal_ix, sign_off_proposal_ix], None)
+            .process_transaction(&[create_proposal_ix], None)
             .await?;
 
         let account = ProposalV2 {
@@ -276,7 +278,7 @@ impl GovernanceTest {
             vote_type: spl_governance::state::proposal::VoteType::SingleChoice,
             options: vec![],
             deny_vote_weight: Some(1),
-            veto_vote_weight: None,
+            veto_vote_weight: 0,
             abstain_vote_weight: None,
             start_voting_at: None,
             draft_at: 1,
@@ -289,10 +291,13 @@ impl GovernanceTest {
             execution_flags: spl_governance::state::enums::InstructionExecutionFlags::None,
             max_vote_weight: None,
             max_voting_time: None,
-            vote_threshold_percentage: None,
-            reserved: [0; 64],
             name: String::from("Proposal #1"),
             description_link: String::from("Proposal #1 link"),
+            reserved: [0; 64],
+            vote_threshold: Some(
+                spl_governance::state::enums::VoteThreshold::YesVotePercentage(60),
+            ),
+            reserved1: 0u8,
         };
 
         Ok(ProposalCookie {
@@ -301,6 +306,80 @@ impl GovernanceTest {
         })
     }
 
+    #[allow(dead_code)]
+    pub async fn with_sign_off_proposal(
+        &self,
+        proposal_cookie: &ProposalCookie,
+        realm_cookie: &RealmCookie,
+    ) -> Result<(), BanksClientError> {
+        let sign_off_proposal_ix = sign_off_proposal(
+            &self.program_id,
+            &realm_cookie.address,
+            &proposal_cookie.account.governance,
+            &proposal_cookie.address,
+            &self.bench.payer.pubkey(),
+            Some(&proposal_cookie.account.token_owner_record),
+        );
+        self.bench
+            .process_transaction(&[sign_off_proposal_ix], None)
+            .await?;
+        Ok(())
+    }
+    
+    #[allow(dead_code)]
+    pub async fn with_add_tx(
+        &self,
+        proposal_cookie: &ProposalCookie,
+    ) -> Result<ProposalTransactionCookie, BanksClientError> {
+        // Mock Ix
+        let data = REVERT_STAGED_APPROVE_PHASE_DATA.to_vec();
+        let accounts = vec![AccountMeta::new(DedSplGovernanceProgram::id(), false)];
+
+        let revert_instruction = Instruction {
+            program_id: PhaseProtocolProgram::id(),
+            accounts,
+            data,
+        };
+
+        let proposal_transaction_address = get_proposal_transaction_address(
+            &self.program_id,
+            &proposal_cookie.address,
+            &0u8.to_le_bytes(),
+            &0u16.to_le_bytes(),
+        );
+
+        let instruction_data = vec![InstructionData::from(revert_instruction)];
+
+        let insert_ix = insert_transaction(
+            &self.program_id,
+            &proposal_cookie.account.governance,
+            &proposal_cookie.address,
+            &proposal_cookie.account.token_owner_record,
+            &self.bench.payer.pubkey(),
+            &self.bench.payer.pubkey(),
+            0,
+            0,
+            0,
+            instruction_data.clone(),
+        );
+
+        self.bench.process_transaction(&[insert_ix], None).await?;
+
+        Ok(ProposalTransactionCookie {
+            address: proposal_transaction_address,
+            account: ProposalTransactionV2 {
+                account_type: GovernanceAccountType::ProposalTransactionV2,
+                proposal: proposal_cookie.address,
+                option_index: 0,
+                transaction_index: 0,
+                hold_up_time: 0,
+                instructions: instruction_data,
+                executed_at: None,
+                execution_status: spl_governance::state::enums::TransactionExecutionStatus::None,
+                reserved_v2: [0; 8],
+            },
+        })
+    }
     #[allow(dead_code)]
     pub async fn with_token_owner_record(
         &mut self,
@@ -355,6 +434,7 @@ impl GovernanceTest {
     ) -> Result<(), BanksClientError> {
         let relinquish_vote_ix = relinquish_vote(
             &self.program_id,
+            &token_owner_record_cookie.account.realm,
             &proposal_cookie.account.governance,
             &proposal_cookie.address,
             &token_owner_record_cookie.address,

@@ -1,7 +1,7 @@
 use std::{str::FromStr, sync::Arc};
 
 use anchor_lang::prelude::Pubkey;
-use solana_program_test::{ProgramTest, BanksClientError};
+use solana_program_test::{BanksClientError, ProgramTest};
 use solana_sdk::{signature::Keypair, signer::Signer};
 use spl_governance::{
     instruction::{

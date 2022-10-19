@@ -9,7 +9,7 @@ pub fn get_token_metadata(account_info: &AccountInfo) -> Result<Metadata> {
         return Err(NftVoterError::InvalidAccountOwner.into());
     }
 
-    let metadata : Metadata = Metadata::from_account_info(account_info)?;
+    let metadata: Metadata = Metadata::from_account_info(account_info)?;
 
     // I'm not sure if this is needed but try_from_slice_checked in from_account_info
     // ignores Key::Uninitialized and hence checking for the exact Key match here

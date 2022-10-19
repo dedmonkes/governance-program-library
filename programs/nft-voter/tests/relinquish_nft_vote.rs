@@ -3,7 +3,7 @@ use gpl_nft_voter::error::NftVoterError;
 use program_test::nft_voter_test::{CastNftVoteArgs, NftVoterTest};
 use program_test::tools::assert_nft_voter_err;
 use solana_program_test::*;
-
+use spl_governance::state::vote_record::{Vote, VoteChoice};
 
 mod program_test;
 
@@ -44,7 +44,112 @@ async fn test_relinquish_nft_vote() -> Result<(), BanksClientError> {
 
     let proposal_cookie = nft_voter_test
         .governance
-        .with_proposal(&realm_cookie)
+        .with_proposal(&realm_cookie, None)
+        .await?;        
+    nft_voter_test
+        .governance
+        .with_sign_off_proposal(&proposal_cookie, &realm_cookie)
+        .await?;
+    
+    let nft_cookie1 = nft_voter_test
+        .token_metadata
+        .with_nft_v2(&nft_collection_cookie, &voter_cookie, None)
+        .await?;
+
+    let nft_vote_record_cookies = nft_voter_test
+        .cast_nft_vote(
+            &registrar_cookie,
+            &voter_weight_record_cookie,
+            &max_voter_weight_record_cookie,
+            &proposal_cookie,
+            &voter_cookie,
+            &voter_token_owner_record_cookie,
+            &[&nft_cookie1],
+            None,
+            None,
+        )
+        .await?;
+
+    nft_voter_test.bench.advance_clock().await;
+
+    // Act
+
+    nft_voter_test
+        .relinquish_nft_vote(
+            &registrar_cookie,
+            &voter_weight_record_cookie,
+            &proposal_cookie,
+            &voter_cookie,
+            &voter_token_owner_record_cookie,
+            &nft_vote_record_cookies,
+        )
+        .await?;
+
+    // Assert
+
+    let voter_weight_record = nft_voter_test
+        .get_voter_weight_record(&voter_weight_record_cookie.address)
+        .await;
+
+    assert_eq!(voter_weight_record.voter_weight_expiry, Some(0));
+    assert_eq!(voter_weight_record.voter_weight, 0);
+
+    // Check NftVoteRecord was disposed
+    let nft_vote_record = nft_voter_test
+        .bench
+        .get_account(&nft_vote_record_cookies[0].address)
+        .await;
+
+    assert_eq!(None, nft_vote_record);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_relinquish_nft_vote_for_proposal_in_voting_state_with_phase_vote() -> Result<(), BanksClientError> {
+    // Arrange
+    let mut nft_voter_test = NftVoterTest::start_new().await;
+
+    let realm_cookie = nft_voter_test.governance.with_realm().await?;
+
+    let registrar_cookie = nft_voter_test.with_registrar(&realm_cookie).await?;
+
+    let nft_collection_cookie = nft_voter_test.token_metadata.with_nft_collection().await?;
+
+    let max_voter_weight_record_cookie = nft_voter_test
+        .with_max_voter_weight_record(&registrar_cookie)
+        .await?;
+
+    nft_voter_test
+        .with_collection(
+            &registrar_cookie,
+            &nft_collection_cookie,
+            &max_voter_weight_record_cookie,
+            None,
+        )
+        .await?;
+
+    let voter_cookie = nft_voter_test.bench.with_wallet().await;
+
+    let voter_token_owner_record_cookie = nft_voter_test
+        .governance
+        .with_token_owner_record(&realm_cookie, &voter_cookie)
+        .await?;
+
+    let voter_weight_record_cookie = nft_voter_test
+        .with_voter_weight_record(&registrar_cookie, &voter_cookie)
+        .await?;
+
+    let proposal_cookie = nft_voter_test
+        .governance
+        .with_proposal(&realm_cookie, Some(vec!["Reject".to_string()]))
+        .await?;
+
+    let proposal_transaction_cookie = nft_voter_test.governance.with_add_tx(&proposal_cookie).await?;
+    
+    nft_voter_test
+        .governance
+        .with_sign_off_proposal(&proposal_cookie, &realm_cookie)
         .await?;
 
     let nft_cookie1 = nft_voter_test
@@ -61,7 +166,24 @@ async fn test_relinquish_nft_vote() -> Result<(), BanksClientError> {
             &voter_cookie,
             &voter_token_owner_record_cookie,
             &[&nft_cookie1],
-            None,
+            Some(proposal_transaction_cookie),
+            Some(CastNftVoteArgs {
+                cast_spl_gov_vote: true,
+                vote_type: Vote::Approve(vec![VoteChoice {
+                    rank: 0,
+                    weight_percentage: 100,
+                }]),
+            }),
+        )
+        .await?;
+
+    // Relinquish Vote from spl-gov
+    nft_voter_test
+        .governance
+        .relinquish_vote(
+            &proposal_cookie,
+            &voter_cookie,
+            &voter_token_owner_record_cookie,
         )
         .await?;
 
@@ -137,7 +259,12 @@ async fn test_relinquish_nft_vote_for_proposal_in_voting_state() -> Result<(), B
 
     let proposal_cookie = nft_voter_test
         .governance
-        .with_proposal(&realm_cookie)
+        .with_proposal(&realm_cookie, None)
+        .await?;
+
+    nft_voter_test
+        .governance
+        .with_sign_off_proposal(&proposal_cookie, &realm_cookie)
         .await?;
 
     let nft_cookie1 = nft_voter_test
@@ -155,6 +282,13 @@ async fn test_relinquish_nft_vote_for_proposal_in_voting_state() -> Result<(), B
             &voter_token_owner_record_cookie,
             &[&nft_cookie1],
             None,
+            Some(CastNftVoteArgs {
+                cast_spl_gov_vote: true,
+                vote_type: Vote::Approve(vec![VoteChoice {
+                    rank: 0,
+                    weight_percentage: 100,
+                }]),
+            }),
         )
         .await?;
 
@@ -241,7 +375,12 @@ async fn test_relinquish_nft_vote_for_proposal_in_voting_state_and_vote_record_e
 
     let proposal_cookie = nft_voter_test
         .governance
-        .with_proposal(&realm_cookie)
+        .with_proposal(&realm_cookie, None)
+        .await?;
+    
+    nft_voter_test
+        .governance
+        .with_sign_off_proposal(&proposal_cookie, &realm_cookie)
         .await?;
 
     let nft_cookie1 = nft_voter_test
@@ -258,6 +397,7 @@ async fn test_relinquish_nft_vote_for_proposal_in_voting_state_and_vote_record_e
             &voter_cookie,
             &voter_token_owner_record_cookie,
             &[&nft_cookie1],
+            None,
             None,
         )
         .await?;
@@ -320,8 +460,10 @@ async fn test_relinquish_nft_vote_with_invalid_voter_error() -> Result<(), Banks
 
     let proposal_cookie = nft_voter_test
         .governance
-        .with_proposal(&realm_cookie)
+        .with_proposal(&realm_cookie, None)
         .await?;
+    
+    nft_voter_test.governance.with_sign_off_proposal(&proposal_cookie, &realm_cookie).await?;
 
     let nft_cookie1 = nft_voter_test
         .token_metadata
@@ -337,6 +479,7 @@ async fn test_relinquish_nft_vote_with_invalid_voter_error() -> Result<(), Banks
             &voter_cookie,
             &voter_token_owner_record_cookie,
             &[&nft_cookie1],
+            None,
             None,
         )
         .await?;
@@ -407,7 +550,7 @@ async fn test_relinquish_nft_vote_with_unexpired_vote_weight_record() -> Result<
 
     let proposal_cookie = nft_voter_test
         .governance
-        .with_proposal(&realm_cookie)
+        .with_proposal(&realm_cookie, None)
         .await?;
 
     let nft_cookie1 = nft_voter_test
@@ -417,6 +560,10 @@ async fn test_relinquish_nft_vote_with_unexpired_vote_weight_record() -> Result<
 
     let args = CastNftVoteArgs {
         cast_spl_gov_vote: false,
+        vote_type: Vote::Approve(vec![VoteChoice {
+            rank: 0,
+            weight_percentage: 100,
+        }]),
     };
 
     // Cast vote with NFT
@@ -429,6 +576,7 @@ async fn test_relinquish_nft_vote_with_unexpired_vote_weight_record() -> Result<
             &voter_cookie,
             &voter_token_owner_record_cookie,
             &[&nft_cookie1],
+            None,
             Some(args),
         )
         .await?;

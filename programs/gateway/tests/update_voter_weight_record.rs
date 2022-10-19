@@ -4,7 +4,6 @@ use program_test::gateway_voter_test::GatewayVoterTest;
 use program_test::tools::*;
 use solana_program_test::*;
 
-
 mod program_test;
 
 #[tokio::test]
