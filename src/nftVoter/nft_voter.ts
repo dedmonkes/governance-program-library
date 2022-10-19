@@ -327,17 +327,30 @@ export type NftVoter = {
           ]
         },
         {
+          "name": "proposal",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "CHECK"
+          ]
+        },
+        {
+          "name": "instructionSysvarAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "governanceProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "proposal",
-          "type": "publicKey"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
@@ -794,6 +807,11 @@ export type NftVoter = {
       "code": 6024,
       "name": "CannotConfigureCollectionWithVotingProposals",
       "msg": "Cannot configure collection with voting proposals"
+    },
+    {
+      "code": 6025,
+      "name": "MustIncludeProposalTransactionForPhaseVotes",
+      "msg": "Must include proposals transaction since the proposal ressembles a phase vote"
     }
   ]
 };
@@ -1127,17 +1145,30 @@ export const IDL: NftVoter = {
           ]
         },
         {
+          "name": "proposal",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "CHECK"
+          ]
+        },
+        {
+          "name": "instructionSysvarAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "governanceProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "proposal",
-          "type": "publicKey"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
@@ -1594,6 +1625,11 @@ export const IDL: NftVoter = {
       "code": 6024,
       "name": "CannotConfigureCollectionWithVotingProposals",
       "msg": "Cannot configure collection with voting proposals"
+    },
+    {
+      "code": 6025,
+      "name": "MustIncludeProposalTransactionForPhaseVotes",
+      "msg": "Must include proposals transaction since the proposal ressembles a phase vote"
     }
   ]
 };
