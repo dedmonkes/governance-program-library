@@ -67,7 +67,7 @@ pub fn configure_collection(
             },
             None => size,
         },
-        Err(err) => return err!(NftVoterError::CollectionNotFound),
+        Err(_) => return err!(NftVoterError::CollectionNotFound),
     };
 
     size = retrieved_size;

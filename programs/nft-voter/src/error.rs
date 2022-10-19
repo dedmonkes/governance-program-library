@@ -76,4 +76,7 @@ pub enum NftVoterError {
 
     #[msg("Cannot configure collection with voting proposals")]
     CannotConfigureCollectionWithVotingProposals,
+
+    #[msg("Must include proposals transaction since the proposal ressembles a phase vote")]
+    MustIncludeProposalTransactionForPhaseVotes,
 }

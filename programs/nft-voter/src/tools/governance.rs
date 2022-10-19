@@ -1,13 +1,9 @@
-use anchor_lang::{
-    prelude::{AccountInfo, ProgramError, Pubkey},
-    require, Id, Key,
-};
+use crate::{error::NftVoterError, state::voter_weight_record::VoterWeightRecord};
+use anchor_lang::{prelude::*, Id, Key};
 use solana_program::{instruction::Instruction, msg};
 use spl_governance::state::{
     proposal::{get_proposal_data, ProposalV2, VoteType},
-    proposal_transaction::{
-        self, get_proposal_transaction_data_for_proposal, ProposalTransactionV2,
-    },
+    proposal_transaction::get_proposal_transaction_data_for_proposal,
     token_owner_record, vote_record,
 };
 
@@ -53,39 +49,50 @@ pub fn is_phase_option(proposal: &ProposalV2) -> bool {
     true
 }
 
-pub fn calculate_voter_weight(
+pub fn add_voter_weight(
     proposal_info: &AccountInfo,
     governance_program_id: &Pubkey,
     proposal_transaction_info: Option<&AccountInfo>,
     cast_vote_ix: Option<Instruction>,
     voter_weight: u64,
-) -> Result<u64, ProgramError> {
+    voter_weight_record: &mut Account<VoterWeightRecord>,
+) -> Result<()> {
     let proposal = get_proposal_data(governance_program_id, proposal_info)?;
-
     if let Some(vote_ix) = cast_vote_ix {
         if is_phase_option(&proposal) {
-            assert!(proposal_transaction_info.is_some());
+
+            if !proposal_transaction_info.is_some() {
+                return Err(NftVoterError::MustIncludeProposalTransactionForPhaseVotes.into());
+            }
 
             if let Some(prop_info) = proposal_transaction_info {
+
                 let is_phase =
                     is_phase_transaction(&prop_info, &governance_program_id, &proposal_info.key())?;
 
                 if is_phase {
                     if vote_ix.data.as_slice() != [13, 0, 1, 0, 0, 0, 0, 100] {
-                        return Ok(0);
+                        msg!("Not an approve option for vote setting weight to 0");
+                        voter_weight_record.voter_weight = 0;
+                        return Ok(())
                     }
                 }
             }
         }
     }
-    Ok(voter_weight)
+    voter_weight_record.voter_weight = voter_weight_record
+        .voter_weight
+        .checked_add(voter_weight)
+        .unwrap();
+
+    Ok(())
 }
 
 pub fn is_phase_transaction(
     proposal_transaction_info: &AccountInfo,
     governance_program_id: &Pubkey,
     proposal_key: &Pubkey,
-) -> Result<bool, ProgramError> {
+) -> Result<bool> {
     let proposal_transaction = get_proposal_transaction_data_for_proposal(
         &governance_program_id,
         &proposal_transaction_info,

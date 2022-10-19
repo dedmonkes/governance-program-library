@@ -1,16 +1,12 @@
 use crate::error::NftVoterError;
-use crate::tools::governance::{calculate_voter_weight, DedSplGovernanceProgram};
+use crate::tools::governance::{add_voter_weight, DedSplGovernanceProgram};
 use crate::{id, state::*};
 use anchor_lang::prelude::*;
 use anchor_lang::Accounts;
 use itertools::Itertools;
+use solana_program::sysvar;
 use solana_program::sysvar::instructions::get_instruction_relative;
-use solana_program::{sysvar, vote};
-use spl_governance::state::proposal::{
-    get_proposal_data, get_proposal_data_for_governance_and_governing_mint,
-};
-use spl_governance::state::proposal_transaction::get_proposal_transaction_data_for_proposal;
-use spl_governance::state::vote_record::Vote;
+
 use spl_governance_tools::account::create_and_serialize_account_signed;
 
 /// Casts NFT vote. The NFTs used for voting are tracked using NftVoteRecord accounts
@@ -151,23 +147,23 @@ pub fn cast_nft_vote<'a, 'b, 'c, 'info>(
     {
         // If cast_nft_vote is called for the same proposal then we keep accumulating the weight
         // this way cast_nft_vote can be called multiple times in different transactions to allow voting with any number of NFTs
-        voter_weight_record.voter_weight = voter_weight_record
-            .voter_weight
-            .checked_add(calculate_voter_weight(
-                &ctx.accounts.proposal,
-                &ctx.accounts.governance_program.key(),
-                proposal_transaction_info,
-                cast_vote_spl_ix,
-                voter_weight,
-            )?)
-            .unwrap();
-    } else {
-        voter_weight_record.voter_weight = calculate_voter_weight(
+        add_voter_weight(
             &ctx.accounts.proposal,
             &ctx.accounts.governance_program.key(),
             proposal_transaction_info,
             cast_vote_spl_ix,
             voter_weight,
+            voter_weight_record,
+        )?;
+    } else {
+        voter_weight_record.voter_weight = 0;
+        add_voter_weight(
+            &ctx.accounts.proposal,
+            &ctx.accounts.governance_program.key(),
+            proposal_transaction_info,
+            cast_vote_spl_ix,
+            voter_weight,
+            voter_weight_record,
         )?;
     }
 

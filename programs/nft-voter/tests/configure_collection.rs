@@ -553,11 +553,11 @@ async fn test_configure_collection_with_voting_proposal_error() -> Result<(), Ba
         )
         .await?;
 
-    nft_voter_test
+    let proposal_cookie = nft_voter_test
         .governance
         .with_proposal(&realm_cookie, None)
         .await?;
-
+    nft_voter_test.governance.with_sign_off_proposal(&proposal_cookie, &realm_cookie).await?;
     nft_voter_test.bench.advance_clock().await;
 
     // Act
