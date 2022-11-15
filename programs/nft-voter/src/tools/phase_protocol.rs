@@ -16,6 +16,6 @@ pub struct PhaseProtocolProgram;
 
 impl anchor_lang::Id for PhaseProtocolProgram {
     fn id() -> Pubkey {
-        Pubkey::from_str("Di92bTGdAUgdfKJYAxC5dX5PJUqmqz3hP84LrHeHXz6M").unwrap()
+        Pubkey::from_str("3skYe7q6eeiA3sh4dok7ZXtARry8iMzDjwiZud1hMFg2").unwrap()
     }
 }

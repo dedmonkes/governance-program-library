@@ -5,7 +5,7 @@ solana_version = "1.10.30"
 seeds = false
 
 [programs.localnet]
-nft_voter = "GnftV5kLjd67tvHpNGyodwWveEKivz3ZWvvE3Z4xi2iw"
+nft_voter = "4MJn3vLQyVhwF77iQ2uF2iSLDE3rWT5mmNw58SDtz79Z"
 gateway = "Ggatr3wgDLySEwA2qEjt1oiw4BUzp5yMLJyz21919dq6"
 solana-gateway-program = "gatem74V238djXdzWnJf94Wo1DcnuGkfijbf3AuBhfs"
 

@@ -16,7 +16,7 @@ pub struct DedSplGovernanceProgram;
 
 impl anchor_lang::Id for DedSplGovernanceProgram {
     fn id() -> Pubkey {
-        Pubkey::from_str("8rCUEcjLgKw8YwtgoFjdD9pjdCNxKD9Xc2DPHVw7qZKx").unwrap()
+        Pubkey::from_str("8CeHquv1qaM4yg1QtXDj8ZmanNxATSEcSi3xWuprecMd").unwrap()
     }
 }
 
