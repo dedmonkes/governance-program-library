@@ -1,5 +1,5 @@
 {
-    "name": "@dedmonkes/governance-program-library",
+    "name": "@phaselabscrypto/governance-program-library",
     "version": "0.16.5",
     "description": "Client for Governance Program Library which is a set of extensions for Solana's spl-governance program.",
     "author": "Solana Maintainers <maintainers@solana.foundation>",
@@ -11,7 +11,7 @@
     ],
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/dedmonkes/governance-program-library.git"
+        "url": "git+https://github.com/phaselabscrypto/governance-program-library.git"
       },
     "scripts": {
         "build": "tsc",
@@ -34,7 +34,7 @@
         "typescript": "^4.1.3"
     },
     "publishConfig": {
-        "@dedmonkes:registry": "https://npm.pkg.github.com"
+        "@phaselabscrypto:registry": "https://npm.pkg.github.com"
     },
     "prettier": {
         "singleQuote": true,
